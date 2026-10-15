@@ -57,7 +57,9 @@ class Split:
         return np.sort(frame["candidate_index"].unique())
 
 
-def _assert_groups_disjoint(train: pd.DataFrame, validation: pd.DataFrame, test: pd.DataFrame) -> None:
+def _assert_groups_disjoint(
+    train: pd.DataFrame, validation: pd.DataFrame, test: pd.DataFrame
+) -> None:
     train_q = set(train["query_index"].unique())
     val_q = set(validation["query_index"].unique())
     test_q = set(test["query_index"].unique())
@@ -106,7 +108,10 @@ def temporal_split(
     test = frame[frame["query_index"].isin(test_queries)].reset_index(drop=True)
 
     _assert_groups_disjoint(train, validation, test)
-    return Split(train=train, validation=validation, test=test, n_jobs=pairs.n_jobs, protocol="temporal")
+    return Split(
+        train=train, validation=validation, test=test,
+        n_jobs=pairs.n_jobs, protocol="temporal",
+    )
 
 
 def grouped_query_split(
@@ -153,4 +158,7 @@ def grouped_query_split(
     test = frame[frame["query_index"].isin(test_queries)].reset_index(drop=True)
 
     _assert_groups_disjoint(train, validation, test)
-    return Split(train=train, validation=validation, test=test, n_jobs=pairs.n_jobs, protocol="grouped")
+    return Split(
+        train=train, validation=validation, test=test,
+        n_jobs=pairs.n_jobs, protocol="grouped",
+    )

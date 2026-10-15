@@ -10,6 +10,8 @@ to one canonical token, grouped into coarse categories so that
 
 from __future__ import annotations
 
+from collections import Counter
+
 #: canonical_skill -> category. Categories are used for coverage features
 #: and for building plausible job postings in the synthetic generator.
 SKILL_CATEGORIES: dict[str, str] = {
@@ -166,3 +168,11 @@ def skill_category(skill: str) -> str | None:
 def seniority_rank(level: str) -> int:
     """Ordinal rank of a seniority level; unknown levels fall back to ``Mid``."""
     return SENIORITY_RANK.get(level, SENIORITY_RANK["Mid"])
+
+
+def dominant_category(canonical_skills: list[str]) -> str | None:
+    """The most common taxonomy category among a job's canonical skills."""
+    categories = [cat for cat in (skill_category(skill) for skill in canonical_skills) if cat]
+    if not categories:
+        return None
+    return Counter(categories).most_common(1)[0][0]

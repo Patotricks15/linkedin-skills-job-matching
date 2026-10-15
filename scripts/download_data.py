@@ -31,7 +31,9 @@ from recommender.features.taxonomy import (  # noqa: E402
 )
 
 DATA_DIR = ROOT / "data"
-REQUIRED_COLUMNS = ["job_id", "title", "description", "skills", "seniority", "location", "posted_at"]
+REQUIRED_COLUMNS = [
+    "job_id", "title", "description", "skills", "seniority", "location", "posted_at",
+]
 
 TITLE_TEMPLATES = {
     "languages": "Software Engineer",
@@ -120,10 +122,11 @@ def generate_synthetic(
         job_id = i + 1
         title = f"{seniority} {TITLE_TEMPLATES[category]}"
         description = (
-            f"We are hiring a {seniority.lower()} professional for our {category.replace('-', ' ')} "
-            f"team in {location}. Required skills: {', '.join(raw_skills)}. "
-            f"The role is based in {location} and reports into the {category.replace('-', ' ')} "
-            "organization."
+            f"We are hiring a {seniority.lower()} professional for our "
+            f"{category.replace('-', ' ')} team in {location}. "
+            f"Required skills: {', '.join(raw_skills)}. "
+            f"The role is based in {location} and reports into the "
+            f"{category.replace('-', ' ')} organization."
         )
         rows.append(
             {

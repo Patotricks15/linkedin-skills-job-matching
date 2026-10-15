@@ -18,9 +18,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from recommender.features.taxonomy import normalize_skills
+# Deferred to function scope (see build_job_catalogue): recommender.features
+# imports recommender.data.loader for FeatureStore construction, so a
+# top-level import here would be circular.
 
-REQUIRED_COLUMNS = {"job_id", "title", "description", "skills", "seniority", "location", "posted_at"}
+REQUIRED_COLUMNS = {
+    "job_id", "title", "description", "skills", "seniority", "location", "posted_at",
+}
 
 
 @dataclass(frozen=True)
@@ -83,6 +87,8 @@ def build_job_catalogue(postings: pd.DataFrame) -> JobPostingData:
     """
     frame = postings.drop_duplicates(subset=["job_id"]).copy()
     frame = frame.sort_values(["posted_at", "job_id"]).reset_index(drop=True)
+
+    from recommender.features.taxonomy import normalize_skills
 
     job_ids = frame["job_id"].to_numpy()
     raw_skills = frame["skills"].fillna("").apply(

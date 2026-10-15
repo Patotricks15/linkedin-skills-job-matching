@@ -1,0 +1,196 @@
+# Feature specification for linkedin-skills-job-matching.
+#
+# Every feature the pipeline materializes is declared here. The registry
+# check in `recommender.features.registry` asserts this file and the
+# implementation agree in BOTH directions, so a transform cannot be computed
+# without being declared, and a declaration cannot go unimplemented.
+#
+# Fields
+#   family        One of the nine families in the portfolio standard.
+#   fit_on        train_only -> reads the training partition's pairs/postings.
+#                 catalogue  -> reads posting metadata only; no label signal.
+#                 none       -> a pure function of the two sides of a pair.
+#   point_in_time Whether the value depends on *when* it is computed. Such
+#                 features receive an explicit `as_of` cut-off and are
+#                 covered by tests/test_features_leakage.py.
+#   fill          Value substituted for entities absent at serving time.
+#   rationale     Why the feature exists. Required; a feature nobody can
+#                 justify is a feature nobody can debug.
+
+version: 1
+dataset: linkedin_skills_jobs
+
+features:
+  - name: profile_skill_count
+    family: user
+    dtype: float64
+    transform: profile_skill_count
+    fit_on: catalogue
+    point_in_time: false
+    params: {}
+    fill:
+      unknown_profile: 0.0
+    rationale: >
+      Count of canonical skills in the candidate profile query. A richer
+      profile narrows BM25 retrieval and gives the overlap features more to
+      work with; a one-skill profile is close to unrankable on content alone.
+
+  - name: profile_seniority_level
+    family: user
+    dtype: float64
+    transform: profile_seniority_level
+    fit_on: catalogue
+    point_in_time: false
+    params: {}
+    fill:
+      unknown_profile: 2.0
+    rationale: >
+      Ordinal seniority of the originating posting, used as the candidate's
+      own seniority. Combined with the candidate job's seniority it drives
+      the seniority-match feature; kept standalone too because a Staff-level
+      profile and an Intern-level profile should not be treated as
+      interchangeable even before any matching is computed.
+
+  - name: profile_taxonomy_coverage
+    family: user
+    dtype: float64
+    transform: profile_taxonomy_coverage
+    fit_on: catalogue
+    point_in_time: false
+    params: {}
+    fill:
+      unknown_profile: 0.0
+    rationale: >
+      Number of distinct taxonomy categories (languages, data, cloud, ...)
+      represented in the profile. Separates a deep single-category profile
+      from a broad multi-category one, which changes which job families are
+      plausible matches regardless of raw skill count.
+
+  - name: candidate_job_popularity_rank
+    family: item
+    dtype: float64
+    transform: candidate_job_popularity_rank
+    fit_on: train_only
+    point_in_time: false
+    params:
+      normalize: true
+    fill:
+      unknown_job: 1.0
+    rationale: >
+      Normalized dense rank of how common a candidate job's taxonomy category
+      is among training candidates. Backs the popularity baseline directly
+      and gives the re-ranker a content-agnostic prior for job families that
+      are simply posted more often.
+
+  - name: candidate_job_trailing_postings
+    family: statistical
+    dtype: float64
+    transform: candidate_job_trailing_postings
+    fit_on: train_only
+    point_in_time: true
+    params:
+      window_days: 60.0
+      log_transform: true
+    fill:
+      unknown_job: 0.0
+    rationale: >
+      Count of same-category postings in the 60 days before the cut-off,
+      among jobs known at training time. Lifetime category popularity is
+      dominated by whatever was common years ago; a trailing window tracks
+      hiring demand as of the query time, which is what a system serving
+      requests at the cut-off actually needs.
+
+  - name: bm25_score
+    family: interaction
+    dtype: float64
+    transform: bm25_score
+    fit_on: train_only
+    point_in_time: false
+    params: {}
+    fill:
+      unknown_job: 0.0
+    rationale: >
+      The stage-1 retrieval score itself, carried into stage 2 as a feature.
+      This is the central mechanic of the two-stage design: the re-ranker is
+      not blind to how strongly lexical retrieval already believed in this
+      candidate, it learns how much to trust that score relative to the
+      structured overlap features.
+
+  - name: skill_overlap_raw
+    family: interaction
+    dtype: float64
+    transform: skill_overlap_raw
+    fit_on: none
+    point_in_time: false
+    params: {}
+    fill:
+      unknown_pair: 0.0
+    rationale: >
+      Count of profile skills that appear verbatim in the candidate's raw
+      (un-normalized) skill mentions. Deliberately naive: it under-counts
+      true overlap whenever a skill is spelled differently ("js" vs
+      "javascript"), which is what makes the gap against
+      skill_overlap_jaccard a measurable demonstration of why taxonomy
+      normalization matters.
+
+  - name: skill_overlap_jaccard
+    family: interaction
+    dtype: float64
+    transform: skill_overlap_jaccard
+    fit_on: none
+    point_in_time: false
+    params: {}
+    fill:
+      unknown_pair: 0.0
+    rationale: >
+      Jaccard overlap between the profile's canonical skills and the
+      candidate's canonical skills. The taxonomy-normalized counterpart to
+      skill_overlap_raw, and the single strongest engineered signal: it is
+      the one feature unavailable to lexical-only retrieval, since BM25
+      rewards surface-form overlap rather than canonical-skill overlap.
+
+  - name: seniority_match
+    family: interaction
+    dtype: float64
+    transform: seniority_match
+    fit_on: none
+    point_in_time: false
+    params: {}
+    fill:
+      unknown_pair: 0.5
+    rationale: >
+      One minus the normalized ordinal distance between profile and
+      candidate seniority. A Senior profile against a Staff posting should
+      rank above the same profile against an Intern posting even when the
+      skill overlap is identical.
+
+  - name: location_match
+    family: context
+    dtype: float64
+    transform: location_match
+    fit_on: none
+    point_in_time: false
+    params: {}
+    fill:
+      unknown_pair: 0.0
+    rationale: >
+      Binary indicator that the profile's origin location matches the
+      candidate's location, or either side is Remote. Location is a hard
+      constraint for a large share of real candidates and costs nothing to
+      compute, so it is included even though it is not a taxonomy feature.
+
+  - name: query_candidate_recency_gap_days
+    family: context
+    dtype: float64
+    transform: query_candidate_recency_gap_days
+    fit_on: train_only
+    point_in_time: true
+    params: {}
+    fill:
+      unknown_pair: 0.0
+    rationale: >
+      Days between the cut-off and the candidate's posting date. A posting
+      that has been open for months is more likely stale or already filled
+      than one posted last week; this is also the feature that most directly
+      exercises the point-in-time contract, since a leaking implementation
+      would let a future candidate posting produce a negative gap.
