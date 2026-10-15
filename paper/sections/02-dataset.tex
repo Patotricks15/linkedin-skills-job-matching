@@ -1,0 +1,35 @@
+\section{Dataset and Proxy Supervision}
+The underlying data (the Kaggle release
+\texttt{asaniczka/1-3m-linkedin-jobs-and-skills-2024}, or a synthetic
+fixture with the same schema for credential-free CI) is job postings: a
+title, a free-text description, a required-skills list, a seniority level,
+a location, and a posting time. It is \emph{not} a candidate-job
+interaction log: there are no real candidate profiles and no record of
+which postings a real candidate ever matched against. Evaluating a
+retrieval-and-ranking system therefore requires a documented proxy.
+
+Each job posting's own canonical skill set stands in for a candidate
+profile that plausibly matches that job: a uniformly sampled 50-90\% subset
+of its canonical skills is kept as the profile query, and the subsampling
+is what keeps the query from being a trivial verbatim duplicate of the
+posting. That profile is paired against its own posting as the single
+positive example, and against nine other randomly sampled postings as
+negatives, all grouped under the originating posting for LightGBM's
+\texttt{lambdarank} group structure. The originating posting's own time
+is treated as the group's query time, so a temporal split on it keeps an
+entire group inside one partition and still supports a genuine
+point-in-time cut-off: if $\tau_1$ and $\tau_2$ are the 80th and 90th
+percentiles of query time, training uses $t<\tau_1$, validation uses
+$\tau_1\le t<\tau_2$, and test uses $t\ge\tau_2$. A second, grouped random
+split (ignoring time entirely) is kept as a sanity check that the headline
+numbers are not an artifact of the temporal boundary.
+
+\paragraph{Limitations.} This construction can demonstrate that a two-stage
+system recovers a posting from a partial, resampled view of its own
+requirements, and that taxonomy normalization helps it do so. It cannot
+demonstrate that the system would satisfy a real candidate's preferences,
+since no real candidate signal exists in the underlying data. Real
+posting-time columns are also absent from the public Kaggle release; when
+\texttt{--kaggle} is used, a posting time is synthesized uniformly over a
+plausible scraping window and this is reported, not concealed, in every
+table this project generates.

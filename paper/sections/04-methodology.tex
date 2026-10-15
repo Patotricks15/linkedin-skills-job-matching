@@ -1,0 +1,53 @@
+\section{Methodology}
+\subsection{Stage 1: BM25 Retrieval}
+Given a query $q$ (the candidate-profile skill tokens) and a document $d$
+(a job posting's title, skills, seniority, and location), BM25 scores
+\[
+\mathrm{BM25}(q,d)=\sum_{t\in q} \mathrm{IDF}(t)\,
+\frac{f(t,d)\,(k_1+1)}{f(t,d)+k_1\big(1-b+b\,\tfrac{|d|}{\mathrm{avgdl}}\big)},
+\]
+where $f(t,d)$ is term $t$'s frequency in $d$, $|d|$ is document length,
+$\mathrm{avgdl}$ is the mean document length over the indexed corpus, and
+$k_1$, $b$ are the usual saturation and length-normalization constants. The
+inverse document frequency term is
+\[
+\mathrm{IDF}(t)=\ln\!\left(\frac{N-n(t)+0.5}{n(t)+0.5}+1\right),
+\]
+with $N$ indexed documents and $n(t)$ the number containing $t$. The index
+is fit on exactly the training partition's candidate pool (\texttt{rank\_bm25}),
+so stage-1 retrieval itself obeys the \texttt{fit\_on: train\_only} contract.
+
+\subsection{The Taxonomy-Normalized Overlap Feature}
+BM25 rewards surface-form overlap: a query token must match a document
+token exactly. Skill mentions in practice are not canonical ("JS",
+"Javascript", "ECMAScript" are one skill under three spellings), so a
+taxonomy-normalized Jaccard overlap is computed separately and fed to
+stage~2 as a feature:
+\[
+\mathrm{overlap}(C,J) = \frac{|\mathrm{skills}(C)\cap\mathrm{skills}(J)|}
+{|\mathrm{skills}(C)\cup\mathrm{skills}(J)|},
+\]
+where $\mathrm{skills}(\cdot)$ denotes the canonical (synonym-collapsed)
+skill set of a candidate profile $C$ or job posting $J$. This is the one
+feature a purely lexical retriever cannot express, and it is the single
+strongest stage-2 signal by gain-based importance.
+
+\subsection{Stage 2: LambdaMART Re-ranking}
+LambdaMART optimizes a pairwise surrogate for a listwise ranking metric.
+For a pair of documents $i$ (more relevant) and $j$ (less relevant) within
+the same query group, the gradient of the loss with respect to the model's
+score $s_i$ is
+\[
+\lambda_{ij} = -\frac{\partial \mathcal{L}}{\partial s_i}
+= \sigma\big(s_j - s_i\big)\cdot|\Delta\mathrm{NDCG}_{ij}|,
+\]
+where $\sigma(\cdot)$ is the logistic function and $|\Delta\mathrm{NDCG}_{ij}|$
+is the change in NDCG that would result from swapping $i$ and $j$ in the
+current ranking. Scaling the pairwise gradient by this swap cost is what
+makes LambdaMART a listwise approximation rather than a plain pairwise
+classifier: mis-ordering two documents near the top of the ranked list is
+penalized far more than mis-ordering two documents far down it, which
+directly targets the NDCG objective stage~2 is evaluated against. LightGBM's
+\texttt{objective=lambdarank} trains exactly this gradient over the
+handcrafted feature matrix described in Section~3, using the LTR group
+structure from the proxy supervision in Section~2.

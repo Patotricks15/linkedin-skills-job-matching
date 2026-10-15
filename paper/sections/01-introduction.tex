@@ -1,0 +1,15 @@
+\section{Introduction}
+Before neural dense retrieval, production search and recommendation systems
+were built on a two-stage pattern: a cheap lexical or statistical retriever
+narrows a large catalogue to a shortlist, and a boosted-tree ranker --
+trained on explicit, auditable features -- reorders that shortlist for
+quality. This project reproduces that pattern end to end for matching
+candidate skill profiles to LinkedIn-style job postings: BM25 lexical
+retrieval (stage~1) followed by LambdaMART re-ranking (stage~2) on
+handcrafted, point-in-time-safe features. The scope is deliberately
+classical: no neural network, no learned embedding space, and no deep
+retriever appear anywhere in the stack. The central lesson is that a fully
+lexical/statistical pipeline remains a strong, inexpensive, and highly
+interpretable baseline, and that taxonomy normalization -- collapsing skill
+synonyms to one canonical token -- is the single engineering lever available
+to such a system in place of a learned embedding space.

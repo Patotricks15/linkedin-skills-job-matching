@@ -1,0 +1,19 @@
+\section{Limitations and Conclusion}
+The central limitation is the one documented in Section~2: there is no real
+candidate-job interaction signal, only a self-supervised proxy built from
+each posting's own (partially resampled) requirements. The reported numbers
+demonstrate that the pipeline mechanics are sound and leakage-free, not that
+the system would satisfy a real candidate's job search. Both BM25 and
+LambdaMART are also purely lexical and statistical: neither captures
+semantic skill similarity outside the hand-built taxonomy (a candidate
+strong in PyTorch but not listing "machine learning" verbatim gets no
+credit a learned embedding space would have given them), which is precisely
+the capability a neural dense retriever would add on top of this
+foundation. The project's contribution is therefore not a claim that
+lexical retrieval plus boosted-tree re-ranking is sufficient for production
+job matching, but a demonstration of the classical, production-proven
+predecessor to neural dense retrieval: a leakage-resistant, fully tested
+two-stage pipeline where every feature is auditable, every split is
+point-in-time safe, and the one lever available in place of a learned
+embedding space -- taxonomy normalization -- is shown, quantitatively, to
+matter.

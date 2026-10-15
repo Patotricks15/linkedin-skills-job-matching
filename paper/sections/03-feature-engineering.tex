@@ -1,0 +1,14 @@
+\section{Feature Engineering}
+The declarative catalogue in \texttt{conf/features.yaml} covers the
+candidate profile (skill count, seniority, taxonomy breadth), the candidate
+job (category popularity, trailing posting volume), the profile-job
+interaction (the stage-1 BM25 score itself, raw and taxonomy-normalized
+skill overlap, seniority match), and context (location match, a
+point-in-time posting-recency gap). Every aggregate over training postings
+is filtered with a strict $t<\text{as\_of}$ comparison, never $\le$: an
+event exactly at the cut-off belongs to the future partition. Schema,
+leakage, and offline/online parity tests enforce this contract, including
+a dedicated control that forges a future query and asserts the fitted
+item-level features do not move. The generated feature catalogue, with its
+declared rationale for each feature, is shown below.
+\scriptsize\input{tables/features}\normalsize

@@ -1,0 +1,29 @@
+\documentclass[10pt,twocolumn]{article}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,graphicx,hyperref}
+\title{BM25 Retrieval and LambdaMART Re-ranking for\\LinkedIn Skills/Job Matching}
+\author{Patrick Gomes de Oliveira}
+\date{\today}
+\begin{document}
+\maketitle
+\begin{abstract}
+We evaluate a classical, fully non-neural two-stage retrieve-then-rank
+pipeline -- BM25 lexical retrieval followed by LambdaMART (LightGBM
+\texttt{lambdarank}) re-ranking over handcrafted features -- for matching
+candidate skill profiles to job postings. The system includes
+point-in-time-safe features, a documented self-supervised proxy for the
+missing candidate-job interaction signal, taxonomy-normalized skill
+overlap, strong non-neural baselines, reproducible Floci/AWS
+infrastructure, and offline-to-online serving parity tests.
+\end{abstract}
+\input{sections/01-introduction}
+\input{sections/02-dataset}
+\input{sections/03-feature-engineering}
+\input{sections/04-methodology}
+\input{sections/05-experiments}
+\input{sections/06-results}
+\input{sections/07-conclusion}
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

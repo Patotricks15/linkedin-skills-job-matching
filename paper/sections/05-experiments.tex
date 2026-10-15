@@ -1,0 +1,23 @@
+\section{Experimental Setup}
+Every model is evaluated over the same candidate pool per partition (the
+distinct job postings that appear as a candidate anywhere in that
+partition's pairs) and the same cut-off $K$, so Recall@K, NDCG@K and MAP@K
+are directly comparable across models:
+\[
+\mathrm{NDCG}@K=\frac{1}{|\mathcal{Q}|}\sum_{q\in\mathcal{Q}}
+\frac{\sum_{j=1}^K rel_{qj}/\log_2(j+1)}{\mathrm{IDCG}_q@K},
+\]
+where $rel_{qj}\in\{0,1\}$ is the proxy relevance label at rank $j$ for
+query $q$ (exactly one posting is relevant per query, by construction of
+the proxy supervision). Recall@K measures only stage~1: whether the true
+posting survived BM25 retrieval into the top-$K$ at all, independent of its
+rank. NDCG@K and MAP@K are computed on whatever stage~1 already retrieved,
+which is what decomposes the end-to-end number into a coverage term and a
+ranking-quality term. Two non-neural baselines bound the comparison: a
+\emph{popularity} baseline with no retrieval step (ranks the full pool by
+raw skill-overlap count), and a \emph{lexical-only} baseline with retrieval
+but no re-ranking (BM25 top-$K$, truncated). Hyperparameters for LightGBM
+are fixed rather than tuned, since the fixture's purpose is to exercise the
+pipeline and its leakage controls, not to report a state-of-the-art number.
+Synthetic data is used for every result in this report; real Kaggle data is
+downloaded on demand and is never committed.

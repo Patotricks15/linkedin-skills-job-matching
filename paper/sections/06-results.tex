@@ -1,0 +1,29 @@
+\section{Results}
+\begin{table}[h]
+\centering\scriptsize
+\caption{Stage-1-vs-stage-2 comparison on the reproducible fixture (test partition).}
+\input{tables/results}
+\end{table}
+The two-stage system (BM25 retrieval followed by LambdaMART re-ranking)
+matches or exceeds the lexical-only baseline on every metric and
+substantially exceeds the retrieval-free popularity baseline, confirming
+the decomposition the evaluation protocol is designed to expose: stage~1
+alone already recovers most of the achievable recall on this fixture, and
+stage~2's contribution is concentrated in ranking quality (NDCG@K, MAP@K)
+rather than coverage. Gain-based feature importance consistently ranks the
+taxonomy-normalized skill overlap above the raw overlap feature, which is
+the quantitative counterpart to the qualitative claim in Section~4: lexical
+matching alone under-counts true overlap whenever a skill is spelled
+differently, and taxonomy normalization recovers exactly that gap.
+
+\section{Deployment}
+Training writes the BM25 index, the LightGBM model, and feature parquet to
+S3, and publishes precomputed top-$N$ job matches to DynamoDB, keyed by
+profile. A Lambda behind API Gateway performs a bounded key lookup rather
+than scoring at request time, which keeps p99 latency bounded by DynamoDB
+rather than by BM25 index size or LightGBM inference cost. EventBridge
+schedules nightly retraining and CloudWatch receives logs. The default
+Terraform profile targets the local Floci AWS emulator and therefore
+requires no paid AWS account; flipping a single variable
+(\texttt{use\_floci=false}) retargets the identical configuration at a
+real account.
